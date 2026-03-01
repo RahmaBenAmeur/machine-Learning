@@ -3,120 +3,122 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import IsolationForest
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+import joblib
+import os
 import warnings
 warnings.filterwarnings('ignore')
+
+def drop_high_cardinality(df, threshold=0.90):
+    """Supprime les colonnes avec trop de valeurs uniques (ID-like)"""
+    cols_to_drop = []
+    for col in df.columns:
+        if col != 'Churn':
+            unique_ratio = df[col].nunique() / len(df)
+            if unique_ratio > threshold:
+                cols_to_drop.append(col)
+    return df.drop(columns=cols_to_drop)
 
 def clean_and_prepare_data(file_path):
     # 1. Chargement
     df = pd.read_csv(file_path)
-    initial_rows = df.shape[0]
-    print(f"Données initiales : {initial_rows} lignes")
+    print(f"📊 Données initiales : {len(df)} lignes")
 
     # ==========================================
-    # ÉTAPE 1 : SUPPRESSION OUTLIERS (ISOLATION FOREST)
+    # ÉTAPE 1 : OUTLIERS & DATES
     # ==========================================
-    print("\n Suppression des outliers (contamination=0.06)...")
-    
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     features_for_outlier = [c for c in numeric_cols if c not in ['Churn', 'CustomerID']]
     
-    # Remplissage temporaire des NaN pour Isolation Forest
-    df_for_iso = df[features_for_outlier].fillna(df[features_for_outlier].median())
-    
-    iso_forest = IsolationForest(contamination=0.06, random_state=42, n_estimators=100)
-    outlier_preds = iso_forest.fit_predict(df_for_iso)
-    
-    # Garder uniquement les inliers
+    iso_forest = IsolationForest(contamination=0.06, random_state=42)
+    outlier_preds = iso_forest.fit_predict(df[features_for_outlier].fillna(0))
     df = df[outlier_preds == 1].reset_index(drop=True)
-    n_outliers = initial_rows - len(df)
-    
-    print(f"   → {n_outliers} outliers supprimés ({n_outliers/initial_rows*100:.1f}%)")
-    print(f"   → {len(df)} lignes conservées")
 
-    # ==========================================
-    # ÉTAPE 2 : PARSING DATES
-    # ==========================================
     df['RegistrationDate'] = pd.to_datetime(df['RegistrationDate'], dayfirst=True, errors='coerce')
-    df['RegYear'] = df['RegistrationDate'].dt.year
-    df['RegMonth'] = df['RegistrationDate'].dt.month
-    df['RegWeekday'] = df['RegistrationDate'].dt.weekday
+    df['RegYear'] = df['RegistrationDate'].dt.year.fillna(df['RegistrationDate'].dt.year.median())
+    df['RegMonth'] = df['RegistrationDate'].dt.month.fillna(df['RegistrationDate'].dt.month.median())
 
     # ==========================================
-    # ÉTAPE 3 : IMPUTATION
+    # ÉTAPE 2 : NETTOYAGE (Anti-Leakage & Redondance)
     # ==========================================
-    print("\n Imputation...")
-    df['Age'] = df['Age'].fillna(df['Age'].median())
-    df['AvgDaysBetweenPurchases'] = df['AvgDaysBetweenPurchases'].fillna(df['AvgDaysBetweenPurchases'].median())
-    df['SupportTicketsCount'] = df['SupportTicketsCount'].fillna(df['SupportTicketsCount'].mean())
-    df['SatisfactionScore'] = df['SatisfactionScore'].fillna(df['SatisfactionScore'].mean())
-    
-    for col in ['Gender', 'AccountStatus']:
-        if col in df.columns and df[col].isna().sum() > 0:
-            df[col] = df[col].fillna(df[col].mode()[0])
-
-    # ==========================================
-    # ÉTAPE 4 : FEATURE ENGINEERING
-    # ==========================================
-    print("Feature Engineering...")
-    df['MonetaryPerDay'] = df['MonetaryTotal'] / (df['Recency'] + 1)
-    df['AvgBasketValue'] = df['MonetaryTotal'] / (df['Frequency'].replace(0, 1))
-    df['TenureRatio'] = df['Recency'] / (df['CustomerTenureDays'] + 1)
-
-    # ==========================================
-    # ÉTAPE 5 : SUPPRESSION COLONNES INUTILES
-    # ==========================================
-    print("Suppression colonnes inutiles...")
-    # NewsletterSubscribed = 100%  (constante)
-    # RegistrationDate = remplacée par features temporelles
-    # CustomerID 
-    # LastLoginIP = donnée brute complexe
-    cols_to_drop = ['NewsletterSubscribed', 'RegistrationDate', 'CustomerID', 'LastLoginIP']
+    cols_to_drop = [
+        'Recency', 'AccountStatus', 'RFMSegment', 'ChurnRiskCategory', 'TenureRatio',
+        'CustomerID', 'RegistrationDate', 'LastLoginIP', 'NewsletterSubscribed',
+        'MonetaryTotal', 'MonetaryAvg', 'TotalQuantity', 'TotalTransactions'
+    ]
     df = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
+    df = drop_high_cardinality(df)
 
-    # ==========================================
-    # ÉTAPE 6 : ENCODAGE
-    # ==========================================
-    print(" Encodage...")
-    le = LabelEncoder()
     for col in df.select_dtypes(include=['object']).columns:
-        df[col] = le.fit_transform(df[col].astype(str))
+        if col != 'Churn':
+            df[col] = LabelEncoder().fit_transform(df[col].astype(str))
+
+    df = df.fillna(df.median())
 
     # ==========================================
-    # ÉTAPE 7 : STANDARDISATION
+    # ÉTAPE 3 : CLUSTERING (K-MEANS)
     # ==========================================
-    print(" Standardisation...")
-    scaler = StandardScaler()
-    features_to_scale = [c for c in df.columns if c != 'Churn']
-    df[features_to_scale] = scaler.fit_transform(df[features_to_scale])
-
-    # Sauvegarde
-    df.to_csv('data/processed/processed_data.csv', index=False)
-    print(f"\n Terminé : {df.shape[0]} lignes × {df.shape[1]} colonnes")
+    print("🤖 Application du Clustering (K-Means)...")
+    X_temp = df.drop(columns=['Churn'])
+    scaler_temp = StandardScaler()
+    X_temp_scaled = scaler_temp.fit_transform(X_temp)
     
-    return df
+    kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
+    df['Cluster_Segment'] = kmeans.fit_predict(X_temp_scaled)
 
-def split_and_save(df):
-    print("\n Split Train/Test (80/20)...")
-    
-    X = df.drop(columns=['Churn'])
+    # ==========================================
+    # ÉTAPE 4 : PCA (RÉDUCTION DE DIMENSION)
+    # ==========================================
+    print("📉 Réduction via PCA (Objectif : 10 composantes)...")
+    X_raw = df.drop(columns=['Churn'])
     y = df['Churn']
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_raw)
     
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    pca = PCA(n_components=10, random_state=42)
+    X_pca = pca.fit_transform(X_scaled)
+    
+    # Création du DataFrame final pré-traité
+    X_final = pd.DataFrame(
+        X_pca, 
+        columns=[f'PC{i+1}' for i in range(10)]
     )
     
-    print(f"   Train: {len(X_train)} | Test: {len(X_test)}")
+    # Dataset complet (X + y) pour sauvegarde
+    processed_full_df = X_final.copy()
+    processed_full_df['Churn'] = y.values
+
+    # ==========================================
+    # ÉTAPE 5 : SAUVEGARDE DU DATASET COMPLET (AVANT SPLIT)
+    # ==========================================
+    os.makedirs('data/processed', exist_ok=True)
+    processed_full_df.to_csv('data/processed/processed_data.csv', index=False)
+    print(f"💾 Dataset complet sauvegardé dans : data/processed/processed_data.csv")
+
+    # ==========================================
+    # ÉTAPE 6 : SPLIT TRAIN/TEST & SAUVEGARDE
+    # ==========================================
+    print("✂️ Découpage Train/Test...")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_final, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    os.makedirs('data/train_test', exist_ok=True)
+    os.makedirs('models', exist_ok=True)
     
     X_train.to_csv('data/train_test/X_train.csv', index=False)
     X_test.to_csv('data/train_test/X_test.csv', index=False)
     y_train.to_csv('data/train_test/y_train.csv', index=False)
     y_test.to_csv('data/train_test/y_test.csv', index=False)
-    print(" Sauvegardé!")
+    
+    # Sauvegarde des modèles de transformation
+    joblib.dump(scaler, 'models/scaler.pkl')
+    joblib.dump(pca, 'models/pca_model.pkl')
+    joblib.dump(kmeans, 'models/kmeans_model.pkl')
+    
+    print(f"✅ Opération terminée ! {X_train.shape[1]} composantes PCA générées.")
 
 if __name__ == "__main__":
-    import os
-    os.makedirs('data/processed', exist_ok=True)
-    os.makedirs('data/train_test', exist_ok=True)
-    
-    data_cleaned = clean_and_prepare_data('data/raw/retail_customers_COMPLETE_CATEGORICAL.csv')
-    split_and_save(data_cleaned)
+    clean_and_prepare_data('data/raw/retail_customers_COMPLETE_CATEGORICAL.csv')
