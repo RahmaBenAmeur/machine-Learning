@@ -1,75 +1,61 @@
 import pandas as pd
-import numpy as np
 import joblib
 import os
-import sys
 
-# Configuration du chemin pour les imports locaux
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-def load_prediction_tools():
-    """Charge le modèle, le scaler et la PCA sauvegardés"""
+def run_batch_prediction():
+    print("🚀 Chargement des modèles et des données de test...")
+    
+    # 1. Chargement des fichiers nécessaires
     try:
-        model = joblib.load('models/best_model.pkl')
-        scaler = joblib.load('models/scaler.pkl')
-        pca = joblib.load('models/pca_model.pkl')
-        return model, scaler, pca
+        X_test = pd.read_csv('data/train_test/X_test.csv')
+        # On charge aussi les vrais labels pour comparaison
+        y_test_actual = pd.read_csv('data/train_test/y_test.csv')
+        y_test_reg_actual = pd.read_csv('data/train_test/y_reg_test.csv')
+        
+        # Chargement des modèles sauvegardés par train_model.py
+        clf_model = joblib.load('models/best_model.pkl')
+        reg_model = joblib.load('models/regression_model.pkl')
+        # Note: Le clustering utilise les données scalées, mais ici on teste sur PCA
+        # Si on veut le segment, on l'ajoute comme information
     except FileNotFoundError as e:
-        print(f"❌ Erreur : Fichiers modèles introuvables ({e})")
-        return None, None, None
+        print(f"❌ Erreur : Fichiers manquants. {e}")
+        return
 
-def predict_churn(new_data):
-    """
-    Prend un DataFrame de nouvelles données, applique les transformations
-    et retourne les prédictions.
-    """
-    model, scaler, pca = load_prediction_tools()
-    if model is None: return
+    # 2. Prédictions groupées
+    print("🔮 Génération des prédictions sur le dataset de test...")
     
-    # 1. Mise à l'échelle (Scaling)
-    # Important : Utiliser le même scaler que l'entraînement
-    data_scaled = scaler.transform(new_data)
+    # Prédiction du Churn (Classification)
+    churn_predictions = clf_model.predict(X_test)
+    churn_probabilities = clf_model.predict_proba(X_test)[:, 1]
     
-    # 2. Transformation PCA
-    # On réduit les colonnes aux 10 composantes PC1...PC10
-    data_pca = pca.transform(data_scaled)
+    # Prédiction des dépenses (Régression)
+    spending_predictions = reg_model.predict(X_test)
+
+    # 3. Création du DataFrame de résultats
+    results = pd.DataFrame({
+        'Actual_Churn': y_test_actual.values.ravel(),
+        'Predicted_Churn': churn_predictions,
+        'Churn_Probability': churn_probabilities.round(4),
+        'Actual_Spending': y_test_reg_actual.values.ravel(),
+        'Predicted_Spending': spending_predictions.round(2)
+    })
+
+    # Calcul de l'erreur de prédiction pour la régression
+    results['Spending_Error'] = (results['Actual_Spending'] - results['Predicted_Spending']).abs()
+
+    # 4. Sauvegarde des résultats
+    os.makedirs('data/results', exist_ok=True)
+    output_path = 'data/results/test_predictions_final.csv'
+    results.to_csv(output_path, index=False)
     
-    # 3. Prédiction
-    predictions = model.predict(data_pca)
-    probabilities = model.predict_proba(data_pca)[:, 1]
-    
-    return predictions, probabilities
+    print(f"\n✅ Analyse terminée !")
+    print(f"📁 Fichier sauvegardé sous : {output_path}")
+    print("\n--- Aperçu des 5 premières lignes ---")
+    print(results.head())
 
-def main():
-    print("🔮 Module de Prédiction de Churn")
-    print("-" * 30)
-
-    # Exemple : Chargement d'un petit échantillon pour tester
-    # Normalement, ici tu chargerais tes nouvelles données clients
-    try:
-        X_test = pd.read_csv('data/train_test/X_test.csv') # Juste pour le test
-        # Note : X_test.csv est déjà en PCA, donc pour un vrai test 'unitaire', 
-        # il faudrait des données brutes (raw). 
-        # Mais voici comment afficher les résultats :
-        
-        model = joblib.load('models/best_model.pkl')
-        
-        # Simulation d'une prédiction sur les 5 premiers clients du test set
-        sample = X_test.head(10)
-        preds = model.predict(sample)
-        probs = model.predict_proba(sample)[:, 1]
-
-        results = pd.DataFrame({
-            'Client_ID': range(1, 11),
-            'Prediction': ['CHURN' if p == 1 else 'FIDELE' for p in preds],
-            'Probabilité_Churn': [f"{p*100:.2f}%" for p in probs]
-        })
-
-        print("\n🚀 Résultats des prédictions :")
-        print(results.to_string(index=False))
-
-    except Exception as e:
-        print(f"⚠️ Erreur lors du test : {e}")
+    # 5. Petit résumé rapide
+    correct_churn = (results['Actual_Churn'] == results['Predicted_Churn']).sum()
+    print(f"\n📈 Précision sur ce fichier : {correct_churn/len(results)*100:.2f}%")
 
 if __name__ == "__main__":
-    main()
+    run_batch_prediction()

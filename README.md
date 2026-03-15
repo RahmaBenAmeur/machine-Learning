@@ -1,35 +1,60 @@
-# machine-Learning
-# 📊 Retail Customer Analysis & Churn Prediction
 
-## 🚀 Objectif
-Ce projet vise à analyser les comportements d'achat pour :
-1.  **Segmenter la clientèle** (Clustering) afin d'identifier les profils types.
-2.  **Prédire le risque de départ** (Churn Prediction) pour anticiper les pertes de clients.
+# 📊 Retail Intelligence : Segmentation, Churn & Spending Prediction
 
----
+## 🚀 Vision Business & Objectifs
+Dans le secteur du e-commerce de cadeaux, la donnée est le levier principal de la personnalisation. Ce projet répond à trois problématiques stratégiques pour optimiser la relation client :
 
-## 🛠️ État d'avancement : Prétraitement
-Le pipeline de données (`src/preprocessing.py`) est finalisé et validé avec les étapes suivantes :
+1. **La Segmentation (Clustering) :** *"Qui sont mes clients ?"* Identifier les profils types (acheteurs occasionnels vs VIP) pour personnaliser les campagnes marketing.
+2. **La Classification (Churn) :** *"Qui risque de partir ?"* Anticiper le départ des clients. Il est **5 à 10 fois plus coûteux** d'acquérir un nouveau client que de retenir un client existant.
+3. **La Régression (Spending) :** *"Quel est le potentiel financier ?"* Estimer la valeur monétaire future pour prioriser les actions commerciales sur les clients à forte valeur ajoutée.
 
-* **Nettoyage & Dates** : Harmonisation des formats hétérogènes et extraction de variables temporelles (`RegYear`, `RegMonth`, `RegWeekday`).
-* **Imputation Intelligente** :
-    * **Médiane** : Utilisée pour l'âge et les fréquences d'achat (données asymétriques).
-    * **Moyenne** : Appliquée aux scores de support technique.
-    * **Mode** : Utilisé pour les variables catégorielles (Genre, Statut du compte).
-* **Feature Engineering** : Création de ratios métiers stratégiques :
-    * `MonetaryPerDay` : Valeur générée par jour d'ancienneté.
-    * `AvgBasketValue` : Montant moyen dépensé par transaction.
-* **Normalisation** : Application du `StandardScaler` (Moyenne ≈ 0, Écart-type ≈ 1) pour optimiser les algorithmes basés sur la distance comme **K-Means**.
+> **Synergie des modèles :** Nous segmentons pour savoir **à qui parler**, nous prédisons le churn pour savoir **qui sauver**, et nous estimons les dépenses pour savoir **quel budget investir**.
 
 ---
 
-## 📂 Structure des fichiers générés
+## 🏗️ Architecture du Pipeline ML
 
-À l'issue du prétraitement, les données sont organisées ainsi :
+### 1. 🛠️ Prétraitement & Feature Engineering (`src/preprocessing.py`)
+Le fondement du projet repose sur une préparation rigoureuse des données :
+* **Nettoyage & Imputation :** Traitement des valeurs manquantes par méthodes statistiques (Médiane pour l'âge, Mode pour le genre).
+* **Ingénierie de variables :** Création de ratios métiers comme `AvgBasketValue` (panier moyen) et `MonetaryPerDay`.
+* **Réduction de Dimension (PCA) :** Compression en **10 composantes principales** (PC1 à PC10), conservant **90% de la variance** pour éliminer le bruit tout en optimisant les calculs.
 
-* `data/processed/processed_data.csv` : Dataset complet, nettoyé et prêt pour l'analyse globale.
-* `data/train_test/` : Données splittées en **80/20** avec stratification sur la cible (Churn) :
-    * `X_train.csv` / `y_train.csv` : Données d'entraînement.
-    * `X_test.csv` / `y_test.csv` : Données de test pour la validation finale.
+### 2. 🏋️ Entraînement & Optimisation (`src/train_model.py`)
+* **Équilibrage (SMOTE) :** Application du sur-échantillonnage synthétique pour corriger le déséquilibre des classes et améliorer la détection des départs.
+* **Benchmark Multimodèle :** Comparaison de KNN, Decision Tree, Random Forest et XGBoost.
+* **Modèle Champion :** Le **Random Forest** a été sélectionné pour sa robustesse et sa précision exceptionnelle.
+
+### 3. 🔮 Inférence & Validation (`src/predict.py`)
+Validation sur un jeu de données "test" (données jamais vues par le modèle) pour garantir la fiabilité des prédictions en conditions réelles.
 
 ---
+
+## 📈 Performances Finales (Modèle de Production)
+Le modèle de classification atteint des scores très satisfaisants :
+
+| Métrique | Score | Signification |
+| :--- | :--- | :--- |
+| **Accuracy** | **90.15%** | Précision globale du modèle sur le jeu de test. |
+| **Precision** | **87.41%** | Fiabilité des alertes de Churn (peu de faux positifs). |
+| **Recall** | **83.39%** | Capacité à détecter les clients qui vont réellement partir. |
+| **ROC-AUC** | **0.9449** | Excellente capacité de séparation des classes. |
+
+---
+
+## 📂 Organisation du Projet
+```plaintext
+├── data/
+│   ├── processed/          # Données nettoyées et transformées
+│   ├── train_test/         # Splits X/y pour l'entraînement
+│   └── results/            # Prédictions batch finalisées
+├── models/
+│   ├── best_model.pkl      # Modèle de Classification (Churn)
+│   ├── regression_model.pkl# Modèle de Régression (Dépenses)
+│   ├── scaler.pkl          # Normalisation sauvegardée
+│   └── pca_model.pkl       # Transformation PCA sauvegardée
+└── src/
+    ├── preprocessing.py    # Pipeline de préparation
+    ├── train_model.py      # Script d'entraînement
+    ├── predict.py          # Script de test et d'inférence
+    └── utils.py            # Fonctions utilitaires et graphiques
