@@ -1,61 +1,90 @@
 import pandas as pd
 import joblib
 import os
+import warnings
 
-def run_batch_prediction():
-    print("🚀 Chargement des modèles et des données de test...")
-    
-    # 1. Chargement des fichiers nécessaires
+# On ignore les warnings de noms de features pour le KMeans
+warnings.filterwarnings("ignore", category=UserWarning)
+
+# Configuration des chemins vers les modèles sauvegardés
+MODEL_PATHS = {
+    'classifier': 'models/best_model.pkl',
+    'regressor': 'models/regression_model.pkl',
+    'kmeans': 'models/kmeans_model.pkl'
+}
+
+# X_test contient déjà les 10 composantes PCA (PC1 à PC10)
+DATA_TEST_PATH = 'data/train_test/X_test.csv'
+TARGET_TEST_PATH = 'data/train_test/y_test.csv'
+
+def run_comprehensive_predictions():
+    print("🔮 Lancement des tests multi-modèles (Classification, Régression, Clustering)...")
+
+    # 1. Chargement des modèles
     try:
-        X_test = pd.read_csv('data/train_test/X_test.csv')
-        # On charge aussi les vrais labels pour comparaison
-        y_test_actual = pd.read_csv('data/train_test/y_test.csv')
-        y_test_reg_actual = pd.read_csv('data/train_test/y_reg_test.csv')
-        
-        # Chargement des modèles sauvegardés par train_model.py
-        clf_model = joblib.load('models/best_model.pkl')
-        reg_model = joblib.load('models/regression_model.pkl')
-        # Note: Le clustering utilise les données scalées, mais ici on teste sur PCA
-        # Si on veut le segment, on l'ajoute comme information
+        classifier = joblib.load(MODEL_PATHS['classifier'])
+        regressor = joblib.load(MODEL_PATHS['regressor'])
+        kmeans = joblib.load(MODEL_PATHS['kmeans'])
+        print("✅ Tous les modèles ont été chargés avec succès.")
     except FileNotFoundError as e:
-        print(f"❌ Erreur : Fichiers manquants. {e}")
+        print(f"❌ Erreur : Fichier modèle introuvable. {e}")
+        print("Assurez-vous d'avoir lancé preprocessing.py puis train_model.py.")
         return
 
-    # 2. Prédictions groupées
-    print("🔮 Génération des prédictions sur le dataset de test...")
-    
-    # Prédiction du Churn (Classification)
-    churn_predictions = clf_model.predict(X_test)
-    churn_probabilities = clf_model.predict_proba(X_test)[:, 1]
-    
-    # Prédiction des dépenses (Régression)
-    spending_predictions = reg_model.predict(X_test)
+    # 2. Chargement des données de test
+    if not os.path.exists(DATA_TEST_PATH):
+        print(f"❌ Erreur : {DATA_TEST_PATH} introuvable.")
+        return
+        
+    X_test = pd.read_csv(DATA_TEST_PATH)
+    y_true = pd.read_csv(TARGET_TEST_PATH).values.ravel()
 
-    # 3. Création du DataFrame de résultats
+    print(f"📊 Test sur {len(X_test)} clients avec {X_test.shape[1]} features PCA.")
+
+    # 3. Exécution des prédictions
+    print("⚙️ Calcul des prédictions en cours...")
+    
+    # --- Classification (Churn) ---
+    churn_preds = classifier.predict(X_test)
+    churn_probs = classifier.predict_proba(X_test)[:, 1]
+
+    # --- Régression (Dépenses) ---
+    spending_preds = regressor.predict(X_test)
+
+    # --- Clustering (Segments) ---
+    # On utilise .values pour éviter le warning sur les noms de colonnes
+    customer_clusters = kmeans.predict(X_test.values)
+
+    # 4. Compilation des résultats
     results = pd.DataFrame({
-        'Actual_Churn': y_test_actual.values.ravel(),
-        'Predicted_Churn': churn_predictions,
-        'Churn_Probability': churn_probabilities.round(4),
-        'Actual_Spending': y_test_reg_actual.values.ravel(),
-        'Predicted_Spending': spending_predictions.round(2)
+        'Real_Status': y_true,
+        'Predicted_Churn': churn_preds,
+        'Churn_Probability_%': (churn_probs * 100).round(2),
+        'Predicted_Spending_DT': spending_preds.round(2),
+        'Customer_Segment': customer_clusters
     })
 
-    # Calcul de l'erreur de prédiction pour la régression
-    results['Spending_Error'] = (results['Actual_Spending'] - results['Predicted_Spending']).abs()
+    # Mappage des segments pour la présentation
+    segment_map = {0: "Econome", 1: "VIP", 2: "Occasionnel", 3: "A risque"}
+    results['Segment_Name'] = results['Customer_Segment'].map(segment_map)
 
-    # 4. Sauvegarde des résultats
+    # 5. Sauvegarde des résultats
     os.makedirs('data/results', exist_ok=True)
-    output_path = 'data/results/test_predictions_final.csv'
+    output_path = 'data/results/test_predictions_complet.csv'
     results.to_csv(output_path, index=False)
-    
-    print(f"\n✅ Analyse terminée !")
-    print(f"📁 Fichier sauvegardé sous : {output_path}")
-    print("\n--- Aperçu des 5 premières lignes ---")
-    print(results.head())
 
-    # 5. Petit résumé rapide
-    correct_churn = (results['Actual_Churn'] == results['Predicted_Churn']).sum()
-    print(f"\n📈 Précision sur ce fichier : {correct_churn/len(results)*100:.2f}%")
+    # 6. Affichage du résumé
+    print("\n" + "="*50)
+    print("📊 RÉSUMÉ DES TESTS")
+    print("="*50)
+    print(f"Nombre de clients analysés : {len(results)}")
+    print(f"Clients détectés 'Churn'  : {results['Predicted_Churn'].sum()}")
+    print(f"Dépense moyenne prévue    : {results['Predicted_Spending_DT'].mean():.2f} DT")
+    print("\nRépartition par Segment :")
+    print(results['Segment_Name'].value_counts())
+    print("="*50)
+    
+    print(f"\n💾 Résultats détaillés : {output_path}")
 
 if __name__ == "__main__":
-    run_batch_prediction()
+    run_comprehensive_predictions()
