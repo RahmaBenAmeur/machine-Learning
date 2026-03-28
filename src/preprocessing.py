@@ -22,11 +22,11 @@ def drop_high_cardinality(df, threshold=0.90):
 
 def clean_and_prepare_data(file_path):
     if not os.path.exists(file_path):
-        print(f"❌ Erreur : Le fichier {file_path} est introuvable.")
+        print(f" Erreur : Le fichier {file_path} est introuvable.")
         return
 
     df = pd.read_csv(file_path)
-    print(f"📊 Données initiales : {len(df)} lignes")
+    print(f" Données initiales : {len(df)} lignes")
 
     # --- 1. OUTLIERS & DATES ---
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -71,7 +71,7 @@ def clean_and_prepare_data(file_path):
     X_final = pd.DataFrame(X_pca, columns=[f'PC{i+1}' for i in range(10)])
 
     # --- 4. CLUSTERING SUR PCA (C'est ici que l'erreur se corrige !) ---
-    print("📍 Entraînement du KMeans sur les 10 composantes PCA...")
+    print(" Entraînement du KMeans sur les 10 composantes PCA...")
     kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
     kmeans.fit(X_final) # On entraîne sur 10 features, donc il attendra 10 features au predict
 
@@ -105,7 +105,7 @@ def clean_and_prepare_data(file_path):
     joblib.dump(pca, 'models/pca_model.pkl')
     joblib.dump(kmeans, 'models/kmeans_model.pkl') # Ce fichier est maintenant correct !
     
-    print(f"✅ Preprocessing terminé. PCA (10 colonnes) et KMeans synchronisés.")
+    print(f" Preprocessing terminé. PCA (10 colonnes) et KMeans synchronisés.")
 
 if __name__ == "__main__":
     clean_and_prepare_data('data/raw/retail_customers_COMPLETE_CATEGORICAL.csv')

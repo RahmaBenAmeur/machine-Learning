@@ -80,6 +80,14 @@
 \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 
+% --- Configuration du sommaire et des liens ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=headerblue, % Utilise votre bleu personnalisé
+    urlcolor=accentorange,
+    pdftitle={Rapport de Projet IoT},
+}
+
 \begin{document}
 
 
@@ -117,6 +125,14 @@
 \end{center}
 \vfill
 \end{titlepage}
+
+
+% --- Page du Sommaire ---
+\newpage
+\thispagestyle{empty}
+\renewcommand{\contentsname}{\color{headerblue}Table des Matières} % Titre en bleu
+\tableofcontents
+\newpage
 
 \section{Introduction Générale}
 

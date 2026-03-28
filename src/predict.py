@@ -3,7 +3,7 @@ import joblib
 import os
 import warnings
 
-# On ignore les warnings de noms de features pour le KMeans
+
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # Configuration des chemins vers les modèles sauvegardés
@@ -13,36 +13,36 @@ MODEL_PATHS = {
     'kmeans': 'models/kmeans_model.pkl'
 }
 
-# X_test contient déjà les 10 composantes PCA (PC1 à PC10)
+
 DATA_TEST_PATH = 'data/train_test/X_test.csv'
 TARGET_TEST_PATH = 'data/train_test/y_test.csv'
 
 def run_comprehensive_predictions():
-    print("🔮 Lancement des tests multi-modèles (Classification, Régression, Clustering)...")
+    print(" Lancement des tests multi-modèles (Classification, Régression, Clustering)...")
 
     # 1. Chargement des modèles
     try:
         classifier = joblib.load(MODEL_PATHS['classifier'])
         regressor = joblib.load(MODEL_PATHS['regressor'])
         kmeans = joblib.load(MODEL_PATHS['kmeans'])
-        print("✅ Tous les modèles ont été chargés avec succès.")
+        print(" Tous les modèles ont été chargés avec succès.")
     except FileNotFoundError as e:
-        print(f"❌ Erreur : Fichier modèle introuvable. {e}")
+        print(f" Erreur : Fichier modèle introuvable. {e}")
         print("Assurez-vous d'avoir lancé preprocessing.py puis train_model.py.")
         return
 
     # 2. Chargement des données de test
     if not os.path.exists(DATA_TEST_PATH):
-        print(f"❌ Erreur : {DATA_TEST_PATH} introuvable.")
+        print(f" Erreur : {DATA_TEST_PATH} introuvable.")
         return
         
     X_test = pd.read_csv(DATA_TEST_PATH)
     y_true = pd.read_csv(TARGET_TEST_PATH).values.ravel()
 
-    print(f"📊 Test sur {len(X_test)} clients avec {X_test.shape[1]} features PCA.")
+    print(f" Test sur {len(X_test)} clients avec {X_test.shape[1]} features PCA.")
 
-    # 3. Exécution des prédictions
-    print("⚙️ Calcul des prédictions en cours...")
+    
+    print(" Calcul des prédictions en cours...")
     
     # --- Classification (Churn) ---
     churn_preds = classifier.predict(X_test)
@@ -75,7 +75,7 @@ def run_comprehensive_predictions():
 
     # 6. Affichage du résumé
     print("\n" + "="*50)
-    print("📊 RÉSUMÉ DES TESTS")
+    print(" RÉSUMÉ DES TESTS")
     print("="*50)
     print(f"Nombre de clients analysés : {len(results)}")
     print(f"Clients détectés 'Churn'  : {results['Predicted_Churn'].sum()}")
@@ -84,7 +84,7 @@ def run_comprehensive_predictions():
     print(results['Segment_Name'].value_counts())
     print("="*50)
     
-    print(f"\n💾 Résultats détaillés : {output_path}")
+    print(f"\n Résultats détaillés : {output_path}")
 
 if __name__ == "__main__":
     run_comprehensive_predictions()

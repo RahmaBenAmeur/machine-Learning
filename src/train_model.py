@@ -28,7 +28,7 @@ DATA_PATHS = {
 }
 
 def main():
-    print("🚀 Démarrage de l'entraînement (Classification & Régression)...")
+    print(" Démarrage de l'entraînement (Classification & Régression)...")
     
     # 1. Chargement
     try:
@@ -39,11 +39,11 @@ def main():
         y_train_reg = pd.read_csv(DATA_PATHS['y_train_reg']).values.ravel()
         y_test_reg = pd.read_csv(DATA_PATHS['y_test_reg']).values.ravel()
     except FileNotFoundError as e:
-        print(f"❌ Erreur: {e}. Lancez preprocessing.py d'abord.")
+        print(f" Erreur: {e}. Lancez preprocessing.py d'abord.")
         return
 
     # 2. SMOTE (Gestion du déséquilibre)
-    print("\n⚖️ Application de SMOTE sur les données d'entraînement...")
+    print("\n Application de SMOTE sur les données d'entraînement...")
     sm = SMOTE(random_state=42)
     X_res, y_res = sm.fit_resample(X_train, y_train)
 
@@ -74,7 +74,7 @@ def main():
     # 4. Meilleur modèle Classification
     compare_models(results)
     best_model_name = max(results, key=lambda x: results[x]['F1-Score'])
-    print(f"\n🏆 Meilleur modèle retenu : {best_model_name}")
+    print(f"\n Meilleur modèle retenu : {best_model_name}")
     save_model(classifiers[best_model_name], 'models/best_model.pkl')
 
     # 5. Régression
@@ -83,7 +83,7 @@ def main():
     reg_model.fit(X_train, y_train_reg)
     save_model(reg_model, 'models/regression_model.pkl')
     
-    print("\n✅ Tous les modèles sont prêts dans /models et les rapports dans /reports.")
+    print("\n Tous les modèles sont prêts dans /models et les rapports dans /reports.")
 
 if __name__ == "__main__":
     main()
