@@ -133,7 +133,7 @@
 \renewcommand{\contentsname}{\color{headerblue}Table des Matières} % Titre en bleu
 \tableofcontents
 \newpage
-
+\setcounter{page}{1}
 \section{Introduction Générale}
 
 \subsection{Contexte du Projet}
@@ -146,6 +146,7 @@ Les entreprises font face à deux défis majeurs dans la gestion de leur base cl
 \begin{itemize}
     \item \textbf{L'attrition (Churn) :} Comment identifier avec précision les clients sur le point de quitter la plateforme ?
     \item \textbf{La segmentation :} Comment regrouper les clients de manière homogène pour personnaliser les actions marketing sans traitement individuel manuel ?
+    \item \textbf{La prédiction de valeur (Régression) :} Comment estimer le potentiel financier futur d'un client (\textit{Customer Lifetime Value}) pour allouer les ressources marketing de manière optimale ?
 \end{itemize}
 
 L'enjeu technique réside dans la manipulation d'un volume important de caractéristiques (52 dimensions au départ) pour construire un pipeline capable de fournir des prédictions simples, fiables et directement utilisables par les décideurs.
@@ -197,57 +198,31 @@ L'analyse exploratoire a mis en exergue trois problématiques majeures qui dicte
     \item \textbf{Dimensionnalité :} Un espace de 52 variables est trop vaste pour un modèle performant sans réduction préalable.
 \end{enumerate}
 
-\section{Prétraitement et Ingénierie des Données (Feature Engineering)}
+\section{Prétraitement et Ingénierie des Données}
 
-Le prétraitement constitue l'étape la plus critique du cycle de vie du projet. L'objectif est de transformer le signal brut issu de l'EDA en une matrice numérique optimisée pour les algorithmes d'apprentissage.
+Le prétraitement constitue l'étape la plus critique du projet. Nous avons implémenté un pipeline robuste permettant de nettoyer, filtrer et transformer les données brutes avant leur modélisation.
 
-\subsection{Nettoyage Avancé du Dataset}
-Le nettoyage ne s'est pas limité à la suppression de lignes, mais a suivi une approche statistique pour garantir la qualité des données.
-
-\subsubsection{Détection d'Anomalies via Isolation Forest}
-Plutôt que d'utiliser des seuils arbitraires, nous avons implémenté l'algorithme non-supervisé \textbf{Isolation Forest}.
+\subsection{Nettoyage Avancé et Filtrage}
+Le nettoyage suit une approche statistique rigoureuse :
 \begin{itemize}
-    \item \textbf{Configuration :} Un taux de contamination de $0.06$ ($6\%$) a été paramétré pour isoler les vecteurs de données atypiques (transactions suspectes ou erreurs de saisie).
-    \item \textbf{Résultat :} Cette étape permet de stabiliser la variance du dataset et d'améliorer la convergence des futurs modèles de clustering.
-\end{itemize}
-
-\subsubsection{Stratégie d'Imputation des Valeurs Manquantes}
-Pour traiter les données incomplètes sans introduire de biais majeur :
-\begin{itemize}
-    \item \textbf{Variables Numériques :} Utilisation de l'imputation par la \textbf{médiane}, plus robuste que la moyenne face aux valeurs extrêmes.
-    \item \textbf{Variables Catégorielles :} Création d'une classe explicite \textit{"Inconnu"} pour les variables textuelles manquantes, permettant de conserver l'information sur l'absence de donnée comme une caractéristique potentielle.
-\end{itemize}
-
-\subsubsection{Réduction de Bruit et Filtrage}
-Une fonction de nettoyage par cardinalité a été développée pour éliminer les colonnes non informatives :
-\begin{itemize}
-    \item \textbf{Variance Nulle :} Suppression des variables constantes (ex: \texttt{NewsletterSubscribed}) qui n'apportent aucun pouvoir discriminant.
-    \item \textbf{Haute Cardinalité :} Suppression automatique des identifiants (IDs) et IPs dont le ratio de valeurs uniques dépasse $90\%$, évitant ainsi le sur-apprentissage (\textit{overfitting}).
+    \item \textbf{Isolation Forest :} Détection d'anomalies avec un taux de contamination de 6\% pour éliminer les comportements transactionnels extrêmes qui pourraient biaiser l'apprentissage.
+    \item \textbf{Imputation :} Utilisation de la \textbf{médiane} pour les variables numériques et création d'une catégorie "Inconnu" pour les variables qualitatives manquantes.
+    \item \textbf{Filtrage de Cardinalité :} Suppression automatique des colonnes dont le ratio de valeurs uniques dépasse 90\% (IDs, IPs) pour éviter le sur-apprentissage.
 \end{itemize}
 
 \subsection{Ingénierie des Caractéristiques (Feature Engineering)}
-Cette phase consiste à créer de nouvelles variables à forte valeur ajoutée à partir des données brutes.
-
-\subsubsection{Analyse Temporelle et Parsing}
-La variable \texttt{RegistrationDate} a été décomposée pour capturer la saisonnalité des inscriptions et l'évolution historique de la base client :
 \begin{itemize}
-    \item \textbf{Extraction granulaire :} Création des variables \texttt{RegYear} (Année) et \texttt{RegMonth} (Mois) pour identifier les périodes de forte acquisition.
-    \item \textbf{Imputation temporelle :} Utilisation de la médiane pour combler les dates manquantes, garantissant que chaque profil client possède une empreinte temporelle exploitable par les modèles de classification.
+    \item \textbf{Analyse Temporelle :} Extraction des variables \texttt{RegYear} et \texttt{RegMonth} à partir de la date d'inscription.
+    \item \textbf{Standardisation :} Application d'un \texttt{StandardScaler} pour normaliser les échelles entre les montants financiers et les fréquences.
 \end{itemize}
 
-\subsection{Transformations Techniques Finales}
-Avant l'injection dans les modèles, les données ont subi deux transformations mathématiques essentielles.
+\subsection{Double Stratégie de Préparation des Données}
+Une distinction majeure a été opérée dans la préparation des données selon l'objectif visé :
 
-\subsubsection{Numérisation par Label Encoding}
-Pour les 13 variables qualitatives restantes (ex: \textit{Region, Gender}), un \textbf{Label Encoding} a été appliqué. Cette transformation convertit chaque modalité textuelle en un entier distinct, rendant le dataset compatible avec les calculs matriciels de \textit{Scikit-Learn}.
-
-\subsubsection{Normalisation (StandardScaler)}
-Étant donné que nos variables ont des unités très différentes (montants en DT vs nombre de jours d'ancienneté), une standardisation a été effectuée.
-\begin{equation}
-z = \frac{x - \mu}{\sigma}
-\end{equation}
-En centrant les données sur une moyenne nulle et une variance unitaire, nous garantissons que la \textbf{PCA} et le \textbf{K-Means} traitent chaque dimension avec la même importance, évitant que les variables à grande échelle ne dominent l'espace vectoriel.
-
+\begin{enumerate}
+    \item \textbf{Pipeline non-supervisé (Clustering \& Churn) :} Utilisation de l'\textbf{Analyse en Composantes Principales (PCA)} pour projeter les 40 variables initiales sur \textbf{10 composantes}. Cette réduction élimine le bruit et la multicolinéarité, facilitant la convergence du K-Means.
+    \item \textbf{Pipeline de Régression (Dépenses) :} Pour la prédiction du \texttt{MonetaryTotal}, nous avons opté pour l'utilisation des \textbf{variables numériques brutes} (Raw Features). Cette approche permet au \textit{Random Forest Regressor} de conserver l'interprétabilité directe des variables (comme la quantité totale) tout en appliquant un écrêtage (\textit{clipping}) au 99ème percentile pour limiter l'impact des outliers.
+\end{enumerate}
 
 \section{Réduction de Dimension et Segmentation}
 
@@ -297,6 +272,12 @@ L'analyse des centroïdes de nos 4 clusters a permis de définir quatre profils 
     \item \textbf{Segment 3 : Nouveaux / À Risque :} Clients récents ou montrant une probabilité de Churn élevée.
 \end{enumerate}
 
+\subsubsection{Méthode d'Interprétation Scientifique}
+Pour valider la pertinence de ces segments, l'application calcule la moyenne de chaque variable numérique par \texttt{Cluster\_ID}. 
+\begin{itemize}
+    \item \textbf{Analyse Comparative :} Nous utilisons un gradient de couleur pour identifier les valeurs maximales par colonne.
+    \item \textbf{Critères de Décision :} Un segment est qualifié de "VIP" si sa moyenne de \texttt{Dépense\_Prevue\_DT} est significativement plus élevée que la moyenne globale, ou de "Fidèle" si sa \texttt{Frequency} est dominante.
+\end{itemize}
 
 \section{Modélisation Prédictive}
 
@@ -405,14 +386,42 @@ Le succès du modèle ne se mesure pas uniquement par son exactitude globale (\t
 En parallèle, nous cherchons à prédire la variable continue \texttt{MonetaryTotal} afin d'estimer la valeur vie client (\textit{Customer Lifetime Value}).
 
 \subsubsection{Approche de régression et Choix Algorithmique}
-L'objectif est d'estimer le montant total qu'un client va dépenser. Pour cette tâche, nous avons porté notre choix sur le \textbf{Random Forest Regressor}. 
+L'objectif est d'estimer le montant total qu'un client va dépenser. Pour cette tâche, nous avons porté notre choix sur le \textbf{Random Forest Regressor} entraîné sur \textbf{31 variables prédictives}.
 
 \begin{itemize}
-    \item \textbf{Justification Technique :} Ce choix est motivé par la capacité de cet algorithme à traiter des relations non-linéaires complexes entre les variables. Mathématiquement, le Random Forest Regressor est conçu pour minimiser nativement l'erreur quadratique (\textbf{MSE/RMSE}) lors de sa phase d'apprentissage.
-    \item \textbf{Indicateur de référence :} La \textbf{RMSE} (\textit{Root Mean Square Error}) constitue notre métrique de référence conceptuelle. Plus cette valeur est faible, plus la prédiction du montant est proche de la réalité transactionnelle. Bien que l'interface se concentre sur la prédiction directe en Dinars, la réduction de cette erreur est au cœur du processus d'entraînement du modèle.
+    \item \textbf{Justification Technique :} Ce choix est motivé par la capacité de cet algorithme à traiter des relations non-linéaires complexes. Nous avons configuré la forêt avec 200 estimateurs et une profondeur maximale de 15 pour garantir une bonne généralisation.
+    \item \textbf{Transformation Logarithmique :} Pour traiter l'asymétrie des montants financiers et stabiliser la variance, nous avons appliqué une transformation $\log(1+x)$ sur la cible avant l'entraînement :
+    \begin{equation}
+    y_{train\_log} = \ln(1 + \max(y_{train}, 0))
+    \end{equation}
 \end{itemize}
 
+\subsubsection{Analyse des Performances et Interprétabilité}
+Les résultats obtenus démontrent une très haute précision du modèle avec un $R^2$ de 0.96 sur l'échelle logarithmique et 0.91 sur l'échelle réelle.
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{regression_raw_final_report.png}
+    \caption{Évaluation du Random Forest : Corrélation (Réel vs Prédit) et Top 10 des variables d'importance.}
+    \label{fig:regression_perf}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Corrélation Réel vs Prédit :} Comme illustré sur le graphique de gauche, le nuage de points suit étroitement la ligne de référence (en rouge), indiquant une fiabilité constante sur toute la gamme de prix.
+    \item \textbf{Importance des Variables (Feature Importance) :} 
+    \begin{itemize}
+        \item \textbf{TotalQuantity :} C'est le prédicteur dominant (score > 0.7), confirmant que le volume d'achat est le meilleur indicateur de la dépense totale.
+        \item \textbf{MonetaryAvg :} Le panier moyen historique est le second facteur clé d'influence.
+    \end{itemize}
+\end{itemize}
+
+\begin{tcolorbox}[colback=green!5,colframe=green!40!black,title=Résultats de l'Entraînement]
+La stabilité du modèle est confirmée par une validation croisée de \textbf{0.9651 (+/- 0.0052)}. 
+\begin{itemize}
+    \item \textbf{RMSE :} 799.64 DT | \textbf{MAE :} 265.01 DT
+\end{itemize}
+Les tests d'inférence valident la capacité du système à estimer précisément le budget futur d'un client à partir de ses données transactionnelles brutes.
+\end{tcolorbox}
 \subsection{Optimisation et Recherche d'Hyperparamètres}
 Pour obtenir les meilleures performances possibles, nous ne nous contentons pas des réglages par défaut des algorithmes.
 
@@ -433,7 +442,7 @@ L'ultime étape de ce projet consiste à rendre les modèles prédictifs accessi
 Pour garantir la maintenabilité et la robustesse de l'application, nous avons adopté une structure de projet modulaire, conforme aux standards de l'ingénierie logicielle.
 
 \begin{itemize}
-    \item \textbf{Dossier \texttt{src/} :} Contient le cœur logique du projet, notamment \texttt{preprocessing.py} pour le nettoyage des données et \texttt{train\_model.py} pour l'entraînement.
+    \item \textbf{Dossier \texttt{src/} :} Contient le cœur logique du projet, notamment \texttt{preprocessing.py}, \texttt{preprocessing\_reg.py} pour le nettoyage des données et \texttt{train\_model.py}, \texttt{train\_reg.py} pour l'entraînement.
     \item \textbf{Dossier \texttt{models/} :} Stocke les objets sérialisés (\texttt{.pkl} ou \texttt{.joblib}) tels que le scaler, le modèle PCA et les modèles de prédiction (Random Forest).
     \item \textbf{Dossier \texttt{app/} :} Regroupe les fichiers liés à l'interface utilisateur développée avec \textbf{Streamlit}, permettant de servir le modèle en temps réel.
 \end{itemize}
@@ -508,6 +517,7 @@ Le travail réalisé a abouti à plusieurs résultats concrets :
     \item \textbf{Optimisation de la donnée :} Le passage de 52 variables à 10 composantes principales via la \textbf{PCA} a permis de conserver plus de 85\% de l'information tout en éliminant la redondance statistique.
     \item \textbf{Segmentation Actionnable :} L'algorithme \textbf{K-Means} ($K=4$) a identifié des groupes de clients aux comportements distincts (Ambassadeurs, Clients à Risque, etc.), offrant ainsi une base solide pour des campagnes marketing ciblées.
     \item \textbf{Performance Prédictive :} Le modèle de classification \textbf{Random Forest} a démontré une capacité robuste à anticiper le \textit{Churn}, avec un équilibre optimal entre précision et rappel après optimisation des hyperparamètres.
+    \item \textbf{régression} a atteint un score $R^2$ de 0,91 sur les montants réels, permettant une prévision budgétaire précise de la valeur vie client (\textit{Customer Lifetime Value}).
 \end{itemize}
 
 \subsection*{Limites du Modèle}

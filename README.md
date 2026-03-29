@@ -1,85 +1,102 @@
 # 📊 Retail Intelligence : Segmentation, Churn & Spending Prediction
 
 ## 🚀 Vision Business & Objectifs
+
 Dans le secteur du e-commerce, la donnée est le levier principal de la personnalisation. Ce projet répond à trois problématiques stratégiques pour optimiser la relation client :
 
-1. **La Segmentation (Clustering) :** *"Qui sont mes clients ?"* Identifier les profils types (VIP, Acheteurs de Gros Volume, Standards, À risque) pour personnaliser les campagnes marketing.
-2. **La Classification (Churn) :** *"Qui risque de partir ?"* Anticiper le départ des clients pour mettre en place des actions de rétention ciblées.
-3. **La Régression (Spending) :** *"Quel est le potentiel financier ?"* Estimer la valeur monétaire future (**MonetaryTotal**) pour prioriser les investissements sur les clients à forte valeur ajoutée.
+- **La Segmentation (Clustering)** : *"Qui sont mes clients ?"*  
+  Identifier les profils (VIP, Acheteurs de Gros, Standards, À risque) pour personnaliser le marketing.
 
-> **Synergie des modèles :** Nous segmentons pour savoir **à qui parler**, nous prédisons le churn pour savoir **qui sauver**, et nous estimons les dépenses pour savoir **quel budget investir**.
+- **La Classification (Churn)** : *"Qui risque de partir ?"*  
+  Anticiper l'attrition pour agir sur la rétention.
+
+- **La Régression (Spending)** : *"Quel est le potentiel financier ?"*  
+  Estimer le `MonetaryTotal` futur pour prioriser les investissements.
 
 ---
 
 ## 🏗️ Architecture du Pipeline ML
 
-### 1. 🛠️ Prétraitement & Feature Engineering (`src/preprocessing.py`)
-Le fondement du projet repose sur une préparation rigoureuse des données :
-* **Nettoyage & Outliers :** Suppression des anomalies via **Isolation Forest** (contamination 0.06) et imputation par la médiane.
-* **Feature Engineering :** Extraction temporelle (`RegYear`, `RegMonth`) et encodage automatique de 13 variables textuelles.
-* **Réduction de Dimension (PCA) :** Compression en **10 composantes principales**, conservant ~90% de la variance pour éliminer le bruit.
-* **Clustering :** Modèle **K-Means** entraîné sur les composantes PCA pour définir 4 segments comportementaux précis.
+Le projet est divisé en deux pipelines distincts pour assurer une spécialisation des modèles :
 
-### 2. 🏋️ Entraînement & Optimisation (`src/train_model.py`)
-* **Équilibrage (SMOTE) :** Application du sur-échantillonnage synthétique pour corriger le déséquilibre des classes de Churn.
-* **Benchmark Multimodèle :** Comparaison rigoureuse de KNN, Decision Tree, Random Forest et XGBoost.
-* **Modèle Champion :** Le **Random Forest** a été sélectionné pour sa robustesse et son excellent **F1-Score**.
-* **Régression :** Utilisation d'un **Random Forest Regressor** optimisé pour minimiser la **RMSE**.
+### 🔹 Pipeline A : Churn & Segmentation
 
-### 3. 💻 Déploiement & Interface (`app.py`)
-Une application interactive développée avec **Streamlit** offrant deux modes :
-* **Analyse par Lot :** Import de fichiers CSV pour un traitement massif et export des résultats.
-* **Analyse Individuelle :** Formulaire dynamique traitant **40 variables features** en temps réel pour une aide à la décision immédiate.
+- `src/preprocessing.py` : Nettoyage, encodage des 13 variables, réduction de dimension par PCA (10 composantes) et génération des clusters via K-Means.
+- `src/train_model.py` : Gestion du déséquilibre des classes par SMOTE et entraînement du Random Forest Classifier.
+
+### 🔹 Pipeline B : Prédiction des Dépenses (Spending)
+
+- `src/preprocessing-reg.py` : Préparation spécifique pour la variable cible continue, gestion des outliers financiers et normalisation.
+- `src/train_reg.py` : Entraînement du Random Forest Regressor avec optimisation des hyperparamètres.
 
 ---
 
-## 📈 Performances du Modèle de Production (Random Forest)
-Le modèle de classification affiche des résultats très robustes :
+## 💻 Interface de Déploiement
 
-| Métrique | Score | Signification |
-| :--- | :--- | :--- |
-| **Accuracy** | **~89%** | Précision globale des prédictions. |
-| **F1-Score** | **0.84** | Équilibre optimal entre précision et rappel. |
-| **ROC-AUC** | **0.94** | Excellente capacité de séparation entre clients fidèles et Churn. |
-| **RMSE (Régression)** | **Indicateur de Réf.** | Minimisation de l'écart moyen en Dinars (DT) pour les dépenses. |
+- `app.py` : Application Streamlit interactive intégrant tous les modèles pour des prédictions en temps réel (formulaire) ou par lot (import CSV).
+
+---
+
+## 📈 Performances des Modèles
+
+| Tâche           | Modèle           | Métrique Clé | Score |
+|----------------|------------------|-------------|-------|
+| Classification | Random Forest    | F1-Score    | 0.84  |
+| Régression     | RF Regressor     | R² Score    | 0.91  |
 
 ---
 
 ## 📂 Organisation du Projet
+
 ```plaintext
 ├── data/
-│   ├── raw/                # Dataset original (retail_customers_COMPLETE.csv)
-│   ├── processed/          # Données après PCA et Clustering
-│   └── results/            # Prédictions finales exportées
+│ ├── raw/ # Dataset original
+│ ├── processed/ # Données après PCA / Prétraitement
+│ └── results/ # Exports des prédictions
 ├── models/
-│   ├── best_model.pkl      # Random Forest Classifier (Churn)
-│   ├── regression_model.pkl # Random Forest Regressor (Dépenses)
-│   ├── kmeans_model.pkl    # Modèle K-Means (Segments)
-│   ├── pca_model.pkl       # Transformateur PCA (10 composantes)
-│   └── scaler.pkl          # Standardisation des données
+│ ├── best_model.pkl # Modèle Churn (Classification)
+│ ├── regression_model.pkl # Modèle Spending (Régression)
+│ ├── kmeans_model.pkl # Modèle Clusters (Segmentation)
+│ ├── pca_model.pkl # Transformateur PCA
+│ └── scaler.pkl # Standardisation
 ├── src/
-│   ├── preprocessing.py    # Nettoyage, PCA et Clustering
-│   ├── train_model.py      # Entraînement, SMOTE et Benchmark
-│   ├── predict.py          # Script d'inférence (test des modèles)
-│   └── utils.py            # Fonctions utilitaires (plots, métriques)
-├── app.py                  # Interface interactive Streamlit
-└── requirements.txt        # Dépendances (scikit-learn, pandas, streamlit, etc.)
+│ ├── preprocessing.py # Pipeline Clustering/Churn
+│ ├── preprocessing-reg.py # Pipeline Régression
+│ ├── train_model.py # Training Churn (SMOTE)
+│ ├── train_reg.py # Training Régression
+│ ├── predict.py # Tests d'inférence
+│ └── utils.py # Visualisations et utilitaires
+├── app/
+|  ├── app.py # Application interactive Streamlit
+└── requirements.txt # Dépendances (scikit-learn, pandas, etc.)
+```
+---
 
 ## 🛠️ Installation et Utilisation
 
-1. **Installation des dépendances :**
+### 1. Installation des dépendances
 
 ```bash
 pip install -r requirements.txt
-
-2. **Entraînement des modèles :**
+```
+### 2.Entraînement du volet Classification & Clustering :
 
 ```bash
+python src/preprocessing.py
 python src/train_model.py
+```
+### 3.Entraînement du volet Régression :
 
-2. **Lancement de l'interface Streamlit :**
+```bash
+python src/preprocessing-reg.py
+python src/train_reg.py
+```
+### Lancement de l'interface :
 
 ```bash
 streamlit run app/app.py
-
+```
 Auteur : Rahma Ben Ameur – Engineering Student at ENIS (GI2).
+
+
+
