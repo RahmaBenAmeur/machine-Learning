@@ -1,9 +1,1 @@
 /.venv
-# LaTeX auxiliary files
-*.aux
-*.toc
-*.log
-*.out
-*.lof
-*.lot
-*.synctex.gz
