@@ -36,10 +36,8 @@
 \contentsline {subsubsection}{\numberline {5.3.1}Utilisation de GridSearchCV et Optuna}{8}{subsubsection.5.3.1}%
 \contentsline {section}{\numberline {6}Réalisation et Déploiement}{8}{section.6}%
 \contentsline {subsection}{\numberline {6.1}Architecture de la Solution}{8}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Présentation de l'Interface Streamlit}{9}{subsection.6.2}%
-\contentsline {subsubsection}{\numberline {6.2.1}Mode Validation par Lot (Batch Processing)}{9}{subsubsection.6.2.1}%
-\contentsline {subsubsection}{\numberline {6.2.2}Mode Analyse Individuelle}{10}{subsubsection.6.2.2}%
-\contentsline {subsection}{\numberline {6.3}Guide d'Utilisation et Déploiement}{11}{subsection.6.3}%
-\contentsline {subsubsection}{\numberline {6.3.1}Gestion des dépendances (\texttt {requirements.txt})}{11}{subsubsection.6.3.1}%
-\contentsline {subsubsection}{\numberline {6.3.2}Exécution de l'application}{11}{subsubsection.6.3.2}%
-\contentsline {section}{Conclusion Générale et Perspectives}{11}{lstnumber.-2.1}%
+\contentsline {subsection}{\numberline {6.2}Présentation de l'Interface Streamlit}{8}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Guide d'Utilisation et Déploiement}{10}{subsection.6.3}%
+\contentsline {subsubsection}{\numberline {6.3.1}Gestion des dépendances (\texttt {requirements.txt})}{10}{subsubsection.6.3.1}%
+\contentsline {subsubsection}{\numberline {6.3.2}Exécution de l'application}{10}{subsubsection.6.3.2}%
+\contentsline {section}{Conclusion Générale et Perspectives}{10}{lstnumber.-2.1}%

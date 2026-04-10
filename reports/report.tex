@@ -448,10 +448,8 @@ Pour garantir la maintenabilité et la robustesse de l'application, nous avons a
 \end{itemize}
 
 \subsection{Présentation de l'Interface Streamlit}
-Le choix de Streamlit s'explique par sa capacité à transformer des scripts Python en tableaux de bord interactifs sans nécessiter de développement Front-End complexe. L'application propose deux modes d'utilisation :
+Le choix de Streamlit s'explique par sa capacité à transformer des scripts Python en tableaux de bord interactifs sans nécessiter de développement Front-End complexe. 
 
-\subsubsection{Mode Validation par Lot (Batch Processing)}
-Ce mode est destiné aux analyses massives. 
 
 
 
@@ -467,27 +465,7 @@ Ce mode est destiné aux analyses massives.
 \end{figure}
 \newpage
 
-\subsubsection{Mode Analyse Individuelle}
-Ce mode permet une évaluation granulaire en temps réel via un formulaire dynamique.
 
-
-\begin{itemize}
-    \item \textbf{Interaction :} L'utilisateur saisit manuellement les caractéristiques d'un client (âge, région, score de satisfaction, etc.).
-    \item \textbf{Réactivité :} Le modèle calcule instantanément la probabilité de départ et le profil du client, offrant une aide à la décision immédiate pour un conseiller clientèle.
-\end{itemize}
-
-\begin{tcolorbox}[title=Rigueur du Pipeline Applicatif]
-\begin{itemize}
-    \item \textbf{Robustesse :} L'interface traite l'intégralité des \textbf{40 variables features}, garantissant que la prédiction repose sur l'ensemble du contexte client. 
-    \item \textbf{Automatisation :} Elle inclut un encodage automatique des 13 colonnes textuelles (via \texttt{Categorical.codes}) et une imputation des valeurs manquantes avant la projection PCA, rendant l'outil accessible à des utilisateurs non-techniciens.
-\end{itemize}
-\end{tcolorbox}
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.85\textwidth]{capture_web1.jpg} 
-    \caption{Interface de saisie individuelle pour une prédiction en temps réel.}
-\end{figure}
 
 
 \subsection{Guide d'Utilisation et Déploiement}

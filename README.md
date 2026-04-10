@@ -33,7 +33,7 @@ Le projet est divisé en deux pipelines distincts pour assurer une spécialisati
 
 ## 💻 Interface de Déploiement
 
-- `app.py` : Application Streamlit interactive intégrant tous les modèles pour des prédictions en temps réel (formulaire) ou par lot (import CSV).
+- `app.py` : Application Streamlit interactive intégrant tous les modèles pour des prédictions en temps réel .
 
 ---
 
